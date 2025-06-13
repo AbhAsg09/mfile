@@ -5,12 +5,11 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"io"
+	"mfile/utils"
 	"os"
 	"strings"
 	"sync"
-	"time"
-
-	"golang.org/x/crypto/ssh"
 
 	"github.com/spf13/cobra"
 )
@@ -149,61 +148,28 @@ func checkSSHAndSudo(server, username, password string) (bool, bool) {
 	sshSuccess := false
 	sudoSuccess := false
 
-	fmt.Printf("Connecting to %s...\n", server)
+	conn, session, err := utils.CreateConnection(server, username, password)
+	if err != nil {
+		fmt.Printf("Error connecting to server: %s \nError: %v", server, err)
+	} else {
+		sshSuccess = true
+		var stdoutBuf, stderrBuf bytes.Buffer
+		session.Stdout = &stdoutBuf
+		session.Stderr = &stderrBuf
 
-	config := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         30 * time.Second,
-	}
+		cmd := "sudo -S -l"
+		stdin, _ := session.StdinPipe()
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, password+"\n")
+		}()
 
-	for i := 0; i < 10; i++ {
-		conn, err := ssh.Dial("tcp", server+":22", config)
-		if err != nil {
-			fmt.Printf("SSH dial failed (%s): %v\n", server, err)
-			continue
-		} else {
-			for i := 0; i < 10; i++ {
-				session, err := conn.NewSession()
-				if err != nil {
-					time.Sleep(5 * time.Second)
-					fmt.Printf("SSH session failed (%s): %v\n", server, err)
-					continue
-				} else {
-					sshSuccess = true
-					var stdoutBuf, stderrBuf bytes.Buffer
-					session.Stdout = &stdoutBuf
-					session.Stderr = &stderrBuf
-
-					cmd := fmt.Sprintf("echo %s | sudo -S -l", password)
-					err = session.Run(cmd)
-					if err != nil {
-						fmt.Println("Error running sudo -l:", err)
-					}
-
-					out := stdoutBuf.String()
-					errOut := stderrBuf.String()
-
-					if bytes.Contains([]byte(out), []byte("may run the following commands")) {
-						sudoSuccess = true
-					}
-
-					session.Close()
-					conn.Close()
-					if errOut == "" && err == nil {
-						break
-					}
-				}
-			}
-			if sudoSuccess {
-				break
-			}
+		err = session.Run(cmd)
+		if err == nil {
+			sudoSuccess = true
 		}
 	}
-
+	utils.Close(session, conn)
 	return sshSuccess, sudoSuccess
 }
 
