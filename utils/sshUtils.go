@@ -13,6 +13,9 @@ var (
 )
 
 func CreateConnection(server string, username string, password string) (conn *ssh.Client, session *ssh.Session, err error) {
+	err = nil
+	session = nil
+	conn = nil
 	fmt.Printf("Connecting to %s...\n", server)
 
 	config := &ssh.ClientConfig{

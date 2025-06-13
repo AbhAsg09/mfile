@@ -64,37 +64,31 @@ var checkCmd = &cobra.Command{
 			return
 		}
 
-		var userCreds []UserCred
+		var wg sync.WaitGroup
+
 		for _, line := range userLines {
 			parts := strings.SplitN(line, ",", 2)
 			if len(parts) != 2 {
 				fmt.Printf("Invalid user line: %s\n", line)
 				continue
 			}
-			userCreds = append(userCreds, UserCred{
-				Username: strings.TrimSpace(parts[0]),
-				Password: strings.TrimSpace(parts[1]),
-			})
-		}
 
-		var allResults []Result
-		var mu sync.Mutex
-		var wg sync.WaitGroup
+			username := strings.TrimSpace(parts[0])
+			password := strings.TrimSpace(parts[1])
 
-		for _, user := range userCreds {
 			wg.Add(1)
-			go func(user UserCred) {
+			go func(username, password string) {
 				defer wg.Done()
-				userResults := checkUserAccess(user, servers)
-				mu.Lock()
-				allResults = append(allResults, userResults...)
-				mu.Unlock()
-			}(user)
+				user := UserCred{Username: username, Password: password}
+				results := checkUserAccess(user, servers)
+				filename := fmt.Sprintf("check_result_%s.csv", strings.ReplaceAll(username, " ", "_"))
+				writeCSV(filename, results)
+				fmt.Printf("Results for %s saved to %s\n", username, filename)
+			}(username, password)
 		}
 
 		wg.Wait()
-		writeCSV("check_results_k.csv", allResults)
-		fmt.Printf("Check completed. Results saved to file")
+		fmt.Println("All checks completed.")
 	},
 }
 
@@ -149,7 +143,7 @@ func checkSSHAndSudo(server, username, password string) (bool, bool) {
 	sudoSuccess := false
 
 	conn, session, err := utils.CreateConnection(server, username, password)
-	if err != nil {
+	if err != nil || session == nil {
 		fmt.Printf("Error connecting to server: %s \nError: %v", server, err)
 	} else {
 		sshSuccess = true
@@ -169,7 +163,9 @@ func checkSSHAndSudo(server, username, password string) (bool, bool) {
 			sudoSuccess = true
 		}
 	}
-	utils.Close(session, conn)
+	if session != nil || conn != nil {
+		utils.Close(session, conn)
+	}
 	return sshSuccess, sudoSuccess
 }
 
