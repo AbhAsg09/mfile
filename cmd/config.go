@@ -16,13 +16,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	username string
-	addPath  string
-	dropPath string
-	ans      string
-)
-
 var configSetCmd = &cobra.Command{
 	Use:   "set",
 	Short: "Set config values using flags",

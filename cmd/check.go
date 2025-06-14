@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/csv"
 	"fmt"
-	"io"
 	"mfile/utils"
 	"os"
 	"strings"
@@ -13,30 +11,6 @@ import (
 
 	"github.com/spf13/cobra"
 )
-
-var (
-	serverListPath string
-	userListPath   string
-)
-
-type Job struct {
-	Server   string
-	Username string
-	Password string
-}
-
-type Result struct {
-	Server     string
-	Username   string
-	SSHAccess  bool
-	SudoAccess bool
-	Err        error
-}
-
-type UserCred struct {
-	Username string
-	Password string
-}
 
 var checkCmd = &cobra.Command{
 	Use:   "check",
@@ -81,7 +55,7 @@ var checkCmd = &cobra.Command{
 				defer wg.Done()
 				user := UserCred{Username: username, Password: password}
 				results := checkUserAccess(user, servers)
-				filename := fmt.Sprintf("check_result_%s.csv", strings.ReplaceAll(username, " ", "_"))
+				filename := fmt.Sprintf("check_results_%s.csv", strings.ReplaceAll(username, " ", "_"))
 				writeCSV(filename, results)
 				fmt.Printf("Results for %s saved to %s\n", username, filename)
 			}(username, password)
@@ -147,21 +121,7 @@ func checkSSHAndSudo(server, username, password string) (bool, bool) {
 		fmt.Printf("Error connecting to server: %s \nError: %v", server, err)
 	} else {
 		sshSuccess = true
-		var stdoutBuf, stderrBuf bytes.Buffer
-		session.Stdout = &stdoutBuf
-		session.Stderr = &stderrBuf
-
-		cmd := "sudo -S -l"
-		stdin, _ := session.StdinPipe()
-		go func() {
-			defer stdin.Close()
-			io.WriteString(stdin, password+"\n")
-		}()
-
-		err = session.Run(cmd)
-		if err == nil {
-			sudoSuccess = true
-		}
+		sudoSuccess = utils.SudoAccess(session, password)
 	}
 	if session != nil || conn != nil {
 		utils.Close(session, conn)

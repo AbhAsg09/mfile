@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -52,4 +54,27 @@ func CreateConnection(server string, username string, password string) (conn *ss
 func Close(session *ssh.Session, conn *ssh.Client) {
 	session.Close()
 	conn.Close()
+}
+
+func SudoAccess(session *ssh.Session, password string) bool {
+	for i := 0; i < 10; i++ {
+		var stdoutBuf, stderrBuf bytes.Buffer
+		session.Stdout = &stdoutBuf
+		session.Stderr = &stderrBuf
+
+		cmd := "sudo -S -l"
+		stdin, _ := session.StdinPipe()
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, password+"\n")
+		}()
+
+		err := session.Run(cmd)
+		if err == nil {
+			return true
+		} else {
+			continue
+		}
+	}
+	return false
 }

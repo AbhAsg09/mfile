@@ -49,3 +49,4 @@ build/
 users.txt
 ips.txt
 check_results*
+check_result_*
