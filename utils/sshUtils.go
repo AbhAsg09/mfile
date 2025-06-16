@@ -55,23 +55,3 @@ func Close(session *ssh.Session, conn *ssh.Client) {
 	session.Close()
 	conn.Close()
 }
-
-// func SudoAccess(session *ssh.Session, password string) bool {
-// 	for i := 0; i < 10; i++ {
-
-// 		cmd := "sudo -S -l"
-// 		stdin, _ := session.StdinPipe()
-// 		go func() {
-// 			defer stdin.Close()
-// 			io.WriteString(stdin, password+"\n")
-// 		}()
-
-// 		err := session.Run(cmd)
-// 		if err == nil {
-// 			return true
-// 		} else {
-// 			continue
-// 		}
-// 	}
-// 	return false
-// }
