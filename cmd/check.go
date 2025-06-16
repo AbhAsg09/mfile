@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"mfile/utils"
 	"os"
 	"strings"
@@ -118,14 +120,48 @@ func checkSSHAndSudo(server, username, password string) (bool, bool) {
 
 	conn, session, err := utils.CreateConnection(server, username, password)
 	if err != nil || session == nil {
-		fmt.Printf("Error connecting to server: %s \nError: %v", server, err)
-	} else {
-		sshSuccess = true
-		sudoSuccess = utils.SudoAccess(session, password)
+		fmt.Printf("Error connecting to server: %s\nError: %v\n", server, err)
+		return false, false
 	}
-	if session != nil || conn != nil {
-		utils.Close(session, conn)
+	defer utils.Close(session, conn)
+
+	sshSuccess = true
+	fmt.Printf("%s has access to %s\n", username, server)
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	session.Stdout = &stdoutBuf
+	session.Stderr = &stderrBuf
+
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		fmt.Printf("Error getting stdin pipe: %v\n", err)
+		return false, false
 	}
+
+	cmd := "sudo -S -l"
+
+	for i := 0; i < 5; i++ {
+		go func() {
+			defer stdin.Close()
+			io.WriteString(stdin, password+"\n")
+		}()
+
+		err = session.Run(cmd)
+
+		if err != nil && err.Error() == "Process exited with status 254" {
+			fmt.Printf("Sudo command failed: %v\nStderr: %s\n", err, stderrBuf.String())
+			continue
+		} else {
+			output := stdoutBuf.String()
+			if strings.Contains(output, "may run the following commands") {
+				fmt.Printf("%s has sudo access to %s\n", username, server)
+				sudoSuccess = true
+				break
+			}
+		}
+	}
+	utils.Close(session, conn)
+
 	return sshSuccess, sudoSuccess
 }
 

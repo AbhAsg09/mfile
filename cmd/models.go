@@ -10,7 +10,6 @@ var (
 	password       string
 	server         string
 	cfgFile        string
-	checkSudo      bool
 )
 
 type Job struct {
