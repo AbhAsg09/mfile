@@ -28,7 +28,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-require (
-	github.com/kr/fs v0.1.0 // indirect
-	github.com/pkg/sftp v1.13.9 // indirect
-)
+require github.com/pkg/sftp v1.13.9
+
+require github.com/kr/fs v0.1.0 // indirect
