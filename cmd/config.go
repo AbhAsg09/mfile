@@ -20,6 +20,20 @@ var configSetCmd = &cobra.Command{
 	Use:   "set",
 	Short: "Set config values using flags",
 	Run: func(cmd *cobra.Command, args []string) {
+		if err := viper.ReadInConfig(); err != nil {
+			// Handle missing config gracefully
+			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+				// Try to write a new one
+				err = viper.SafeWriteConfig()
+				if err != nil {
+					fmt.Printf("Error creating config: %v\n", err)
+					return
+				}
+			} else {
+				fmt.Printf("Error reading config: %v\n", err)
+				return
+			}
+		}
 		fmt.Println("Do you wanna update username?(Y/N)")
 		fmt.Scanln(&ans)
 		if ans == "Y" || ans == "y" {
@@ -81,6 +95,22 @@ var configCmd = &cobra.Command{
 
 		//To add a new path in the config file
 		if addPath != "" {
+			if err := viper.ReadInConfig(); err != nil {
+				// Handle missing config gracefully
+				if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+					// Try to write a new one
+					err = viper.SafeWriteConfig()
+					if err != nil {
+						fmt.Printf("Error creating config: %v\n", err)
+						return
+					}
+				} else {
+					fmt.Printf("Error reading config: %v\n", err)
+					return
+				}
+			}
+
+			// Now safe to set values
 			parts := strings.SplitN(addPath, "=", 2)
 			if len(parts) != 2 {
 				fmt.Println("Invalid format for --addPath. Use key=value format.")
@@ -89,6 +119,8 @@ var configCmd = &cobra.Command{
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
 			viper.Set(key, value)
+
+			// Overwrite with updated values
 			if err := viper.WriteConfig(); err != nil {
 				fmt.Printf("Error writing config: %v\n", err)
 				return
@@ -139,7 +171,7 @@ var configCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(configCmd)
-	rootCmd.AddCommand(configSetCmd)
+	configCmd.AddCommand(configSetCmd)
 	configCmd.Flags().StringVar(&addPath, "addPath", "", "Add a path in config file")
 	configCmd.Flags().StringVar(&dropPath, "dropPath", "", "Drop a path from config file")
 }

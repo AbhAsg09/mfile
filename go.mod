@@ -27,3 +27,8 @@ require (
 	golang.org/x/text v0.26.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+require (
+	github.com/kr/fs v0.1.0 // indirect
+	github.com/pkg/sftp v1.13.9 // indirect
+)

@@ -4,12 +4,14 @@ var (
 	serverListPath string
 	userListPath   string
 	username       string
+	password       string
 	addPath        string
 	dropPath       string
 	ans            string
-	password       string
-	server         string
 	cfgFile        string
+	fileName       string
+	filePath       string
+	server         string
 )
 
 type Job struct {

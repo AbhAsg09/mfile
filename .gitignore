@@ -50,3 +50,4 @@ users.txt
 ips.txt
 check_results*
 check_result_*
+*.yaml
