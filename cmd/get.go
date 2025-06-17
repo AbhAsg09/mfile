@@ -8,6 +8,7 @@ import (
 	"io"
 	"mfile/utils"
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,7 +19,7 @@ var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Will be used to retrieve file from the server",
 	Run: func(cmd *cobra.Command, args []string) {
-		if server != "" {
+		if server == "" {
 			fmt.Println("Server name is required.")
 			return
 		}
@@ -30,6 +31,12 @@ var getCmd = &cobra.Command{
 		password = viper.GetString("password")
 		if filePath == "" {
 			filePath = viper.GetString("defaultPath")
+		} else {
+			filePath = viper.GetString(filePath)
+			if filePath == "" {
+				fmt.Println("File path not found")
+				return
+			}
 		}
 
 		conn, sftpClient, err := utils.CreateSFTP(server, username, password)
@@ -38,9 +45,11 @@ var getCmd = &cobra.Command{
 			return
 		}
 
-		file := fmt.Sprintf("%s/%s", filePath, fileName)
+		file := path.Join(filePath, fileName)
 
 		srcFile, err := sftpClient.Open(file)
+		fmt.Printf("Connected to server %s\n", server)
+		fmt.Printf("Filepath: %s\n", file)
 		if err != nil {
 			panic("Failed to open remote file: " + err.Error())
 		}
@@ -68,7 +77,8 @@ var getCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVar(&server, "server", "s", "Server name that stores the file")
-	getCmd.Flags().StringVar(&fileName, "file", "f", "Filename to be retrieved")
-	getCmd.Flags().StringVar(&filePath, "path", "p", "File path given")
+	getCmd.Flags().StringVarP(&server, "server", "s", "", "Server name that stores the file")
+	getCmd.Flags().StringVarP(&fileName, "file", "f", "", "Filename to be retrieved")
+	getCmd.Flags().StringVarP(&filePath, "path", "p", "", "Remote file path (optional)")
+
 }
