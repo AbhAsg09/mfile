@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"mfile/utils"
+	"net"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,10 +25,20 @@ var getCmd = &cobra.Command{
 			fmt.Println("Server name is required.")
 			return
 		}
+
 		if fileName == "" {
 			fmt.Println("File name is required")
 			return
 		}
+
+		fmt.Println("Starting download...")
+
+		server = tryResolveServerName(server)
+		if server == "" {
+			fmt.Println("Server name either incorrect or Server Down! Please recheck and try later.")
+			return
+		}
+
 		username = viper.GetString("username")
 		password = viper.GetString("password")
 		if filePath == "" {
@@ -39,40 +51,76 @@ var getCmd = &cobra.Command{
 			}
 		}
 
-		conn, sftpClient, err := utils.CreateSFTP(server, username, password)
-		if err != nil || sftpClient == nil {
-			fmt.Printf("Error connecting to server: %s\n", server)
-			return
+		success := SFTP(server, username, password, fileName, filePath)
+		if success {
+			fmt.Println("File downloaded successfully!")
+		} else {
+			fmt.Println("File could not be downloaded!")
+
 		}
-
-		file := path.Join(filePath, fileName)
-
-		srcFile, err := sftpClient.Open(file)
-		fmt.Printf("Connected to server %s\n", server)
-		fmt.Printf("Filepath: %s\n", file)
-		if err != nil {
-			panic("Failed to open remote file: " + err.Error())
-		}
-		defer srcFile.Close()
-
-		dstFile, err := os.Create(fileName)
-		if err != nil {
-			panic("Failed to create local file: " + err.Error())
-		}
-		defer dstFile.Close()
-
-		_, err = io.Copy(dstFile, srcFile)
-		if err != nil {
-			panic("Failed to copy: " + err.Error())
-		}
-
-		fmt.Println("File downloaded successfully!")
-
-		if sftpClient != nil || conn != nil {
-			utils.CloseSFTP(sftpClient, conn)
-		}
-
 	},
+}
+
+func SFTP(server string, username string, password string, fileName string, filePath string) bool {
+	conn, sftpClient, err := utils.CreateSFTP(server, username, password)
+	if err != nil || sftpClient == nil {
+		fmt.Printf("Error connecting to server: %s\n", server)
+		return false
+	}
+
+	file := path.Join(filePath, fileName)
+
+	srcFile, err := sftpClient.Open(file)
+	fmt.Printf("Connected to server %s\n", server)
+	fmt.Printf("Filepath: %s\n", file)
+	if err != nil {
+		fmt.Printf("Failed to find remote file: %v\n", err)
+		utils.CloseSFTP(sftpClient, conn)
+		return false
+	}
+	defer srcFile.Close()
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Println("Failed to get your home directory")
+		utils.CloseSFTP(sftpClient, conn)
+		return false
+	}
+
+	downloadsDir := filepath.Join(homeDir, "Downloads", fileName)
+	dstFile, err := os.Create(downloadsDir)
+	if err != nil {
+		fmt.Printf("Failed to create local file: %v\n", err)
+		utils.CloseSFTP(sftpClient, conn)
+		return false
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		fmt.Printf("Failed to create file: %v\n", err)
+		utils.CloseSFTP(sftpClient, conn)
+		return false
+	}
+
+	utils.CloseSFTP(sftpClient, conn)
+	return true
+}
+
+func tryResolveServerName(base string) string {
+
+	// Try original
+	if _, err := net.LookupIP(base); err == nil {
+		return base
+	}
+
+	// Try suffix variations
+	suffix := "a"
+	base = fmt.Sprintf("%s%s", base, suffix)
+	if _, err := net.LookupIP(base); err == nil {
+		return base
+	}
+	return ""
 }
 
 func init() {
