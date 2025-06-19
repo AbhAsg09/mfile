@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -21,9 +18,7 @@ var configSetCmd = &cobra.Command{
 	Short: "Set config values using flags",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := viper.ReadInConfig(); err != nil {
-			// Handle missing config gracefully
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				// Try to write a new one
 				err = viper.SafeWriteConfig()
 				if err != nil {
 					fmt.Printf("Error creating config: %v\n", err)
@@ -75,14 +70,13 @@ var configSetCmd = &cobra.Command{
 func promptPassword() (string, error) {
 	fmt.Print("Enter password: ")
 	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
-	fmt.Println() // Move to the next line after input
+	fmt.Println()
 	if err != nil {
 		return "", err
 	}
 	return string(bytePassword), nil
 }
 
-// configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "View and Edit the mfile configuration",
@@ -93,12 +87,9 @@ var configCmd = &cobra.Command{
 			return
 		}
 
-		//To add a new path in the config file
 		if addPath != "" {
 			if err := viper.ReadInConfig(); err != nil {
-				// Handle missing config gracefully
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-					// Try to write a new one
 					err = viper.SafeWriteConfig()
 					if err != nil {
 						fmt.Printf("Error creating config: %v\n", err)
@@ -110,7 +101,6 @@ var configCmd = &cobra.Command{
 				}
 			}
 
-			// Now safe to set values
 			parts := strings.SplitN(addPath, "=", 2)
 			if len(parts) != 2 {
 				fmt.Println("Invalid format for --addPath. Use key=value format.")
@@ -120,7 +110,6 @@ var configCmd = &cobra.Command{
 			value := strings.TrimSpace(parts[1])
 			viper.Set(key, value)
 
-			// Overwrite with updated values
 			if err := viper.WriteConfig(); err != nil {
 				fmt.Printf("Error writing config: %v\n", err)
 				return
@@ -139,7 +128,6 @@ var configCmd = &cobra.Command{
 
 		}
 
-		//To drop an existing path in the config file
 		if dropPath != "" {
 			settings := viper.AllSettings()
 

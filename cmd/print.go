@@ -6,16 +6,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// printCmd represents the print command
-var printCmd = &cobra.Command{
+var testCmd = &cobra.Command{
 	Use:   "print",
 	Short: "Print \"Hello World!\"",
-	Long:  `Print \"Hello World!\`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Hello World!")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(printCmd)
+	rootCmd.AddCommand(testCmd)
 }

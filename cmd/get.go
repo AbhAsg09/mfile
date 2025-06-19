@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -17,7 +14,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Will be used to retrieve file from the server",
@@ -100,7 +96,6 @@ func SFTP(server string, username string, password string, fileName string, file
 	fmt.Printf("Downloading %s from %s...\n", fileName, server)
 
 	stat, _ := srcFile.Stat()
-	// Optional: Add progress bar
 	bar := progressbar.DefaultBytes(
 		stat.Size(),
 		fmt.Sprintf("Downloading from %s", server),
@@ -118,12 +113,10 @@ func SFTP(server string, username string, password string, fileName string, file
 
 func tryResolveServerName(base string) string {
 
-	// Try original
 	if _, err := net.LookupIP(base); err == nil {
 		return base
 	}
 
-	// Try suffix variations
 	suffix := "a"
 	base = fmt.Sprintf("%s%s", base, suffix)
 	if _, err := net.LookupIP(base); err == nil {
