@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -96,10 +97,18 @@ func SFTP(server string, username string, password string, fileName string, file
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
+	fmt.Printf("Downloading %s from %s...\n", fileName, server)
+
+	stat, _ := srcFile.Stat()
+	// Optional: Add progress bar
+	bar := progressbar.DefaultBytes(
+		stat.Size(),
+		fmt.Sprintf("Downloading from %s", server),
+	)
+
+	_, err = io.Copy(io.MultiWriter(dstFile, bar), srcFile)
 	if err != nil {
-		fmt.Printf("Failed to create file: %v\n", err)
-		utils.CloseSFTP(sftpClient, conn)
+		fmt.Printf("Failed to copy file: %v\n", err)
 		return false
 	}
 
