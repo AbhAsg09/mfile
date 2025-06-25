@@ -5,23 +5,49 @@ import (
 	"net"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "To get server logs",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("log called")
+		if server == "" {
+			fmt.Println("Server name is required.")
+			return
+		}
+
+		if fileName == "" {
+			fmt.Println("File name is required")
+			return
+		}
+
+		fmt.Println("Starting download...")
+
+		sname := tryResolveServerNames(server)
+		if server == "" {
+			fmt.Println("Server name either incorrect or Server Down! Please recheck and try later.")
+			return
+		}
+
+		username = viper.GetString("username")
+		password = viper.GetString("password")
+		filePath = viper.GetString("logs")
+		getLogs(sname, server, username, password)
+
 	},
 }
 
+func getLogs(sname []string, server string, username string, password string) {
+	for _, i := range sname {
+		fmt.Println(i)
+	}
+}
+
 func init() {
+	getCmd.Flags().StringVarP(&server, "server", "s", "", "Server name that stores the file")
+	getCmd.Flags().StringVarP(&fileName, "file", "f", "", "Filename to be retrieved")
+	getCmd.Flags().StringVarP(&search, "search", "S", "", "String to be searched in file")
 	rootCmd.AddCommand(logCmd)
 }
 

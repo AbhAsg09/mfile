@@ -12,6 +12,8 @@ var (
 	fileName       string
 	filePath       string
 	server         string
+	search         string
+	date           string
 )
 
 type Job struct {
